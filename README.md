@@ -1,16 +1,16 @@
 
 # 🧠 Whisper.cpp Setup & Easy Transcription Script (macOS)
 
-This guide walks you through setting up [whisper.cpp](https://github.com/ggerganov/whisper.cpp), downloading the base model, and creating a reusable shell script for simple, local audio transcription using OpenAI’s Whisper.
+This guide walks you through setting up [whisper.cpp](https://github.com/ggml-org/whisper.cpp), downloading a model, and using the `transcribe.sh` script in this repo for simple, local audio transcription using OpenAI’s Whisper.
 
 ---
 
 ## ✅ Prerequisites
 
 - macOS with `zsh` or `bash`
-- CMake and `make` installed
-- `ffmpeg` (for audio compatibility)
+- Homebrew installed
 - Internet connection (for downloading the model)
+- `ffmpeg` (optional): only needed for formats `whisper-cli` cannot read, such as `.m4a`. The script converts them automatically.
 
 Install ffmpeg if needed:
 
@@ -20,15 +20,10 @@ brew install ffmpeg
 
 ---
 
-## 🛠️ 1. Clone and Build `whisper.cpp`
+## 🛠️ 1. Install `whisper.cpp`
 
 ```bash
-cd ~/Workspace/Whisper
-git clone https://github.com/ggerganov/whisper.cpp.git
-cd whisper.cpp
-mkdir build && cd build
-cmake .. -DBUILD_SHARED_LIBS=OFF
-make -j
+brew install whisper.cpp
 ```
 
 ---
@@ -36,62 +31,51 @@ make -j
 ## 📥 2. Download Whisper Model
 
 ```bash
-cd ~/Workspace/Whisper/whisper.cpp
-mkdir -p models
-cd models
-curl -L -o ggml-base.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin
+mkdir -p ~/Workspace/Whisper/models
+cd ~/Workspace/Whisper/models
+curl -L -o ggml-large-v3.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin
 ```
 
-> ✅ You can replace `base` with `small`, `medium`, or `large` if desired.
+> ✅ This is a 3.1 GB download. The script expects `ggml-large-v3.bin` in this folder. To use another model (such as `base` or `large-v3-turbo`), download it and set `WHISPER_MODEL` (see step 3).
 
 ---
 
-## 📝 3. Create `transcribe.sh` Script
+## 📝 3. Get the `transcribe.sh` Script
 
-Save this in:  
-`~/Workspace/Whisper/transcribe.sh`
+The script is in this repo: [`transcribe.sh`](transcribe.sh).
 
 ```bash
-#!/bin/bash
-
-# Add whisper.cpp build to library path if needed
-export DYLD_LIBRARY_PATH="~/Workspace/Whisper/whisper.cpp/build:$DYLD_LIBRARY_PATH"
-
-# Paths
-MODEL="~/Workspace/Whisper/whisper.cpp/models/ggml-base.bin"
-BIN="~/Workspace/Whisper/whisper.cpp/build/bin/whisper-cli"
-AUDIO="$1"
-
-# Transcribe
-"$BIN" "$AUDIO" --model "$MODEL" --output-txt
+git clone https://github.com/avikahana/Transcription.git
+cd Transcription
+chmod +x transcribe.sh
 ```
 
-Make it executable:
+By default it uses `~/Workspace/Whisper/models/ggml-large-v3.bin`. To use another model file, set `WHISPER_MODEL`:
 
 ```bash
-chmod +x ~/Workspace/Whisper/transcribe.sh
+WHISPER_MODEL=~/Workspace/Whisper/models/ggml-base.bin ./transcribe.sh ~/folder/file.wav
 ```
 
 ---
 
 ## ▶️ 4. Run It!
 
-Use the script like this:
-
 ```bash
-~/Workspace/Whisper/transcribe.sh ~/folder/file.wav
+./transcribe.sh ~/folder/file.wav
 ```
 
-Output will be in the same folder as your input `.wav` file — with a `.txt` suffix.
+The transcript is saved next to the input file, with `.txt` added to the full name. For example, `file.wav` becomes `file.wav.txt`.
+
+You can pass several files at once: `./transcribe.sh ~/folder/*.m4a`
+
+`.wav`, `.mp3`, `.flac` and `.ogg` are read directly. Other formats (such as `.m4a`) are converted automatically with ffmpeg, and the transcript is still named after the original file (`memo.m4a.txt`).
+
+> ℹ️ The language is detected automatically. To set it yourself: `WHISPER_LANG=he ./transcribe.sh file.wav`
 
 ---
 
 ## 🧠 Optional Enhancements
 
 - Add `--output-srt` or `--output-vtt` for subtitle files
-- Use `ggml-large.bin` for better accuracy
+- Use `ggml-large-v3-turbo.bin` (1.6 GB) for faster transcription with nearly the same accuracy
 - Add logic to auto-download model if missing
-
----
-
-Let me know if you'd like this saved to a file or extended into a tool that watches a folder and auto-transcribes!
